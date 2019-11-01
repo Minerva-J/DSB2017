@@ -160,9 +160,9 @@ class CaseNet(nn.Module):
         nodulePred = nodulePred.contiguous().view(corrdsize[0],corrdsize[1],-1)
         
         featshape = noduleFeat.size()#nk x 128 x 24 x 24 x24
-        centerFeat = self.pool(noduleFeat[:,:,featshape[2]/2-1:featshape[2]/2+1,
-                                          featshape[3]/2-1:featshape[3]/2+1,
-                                          featshape[4]/2-1:featshape[4]/2+1])
+        centerFeat = self.pool(noduleFeat[:,:,featshape[2]//2-1:featshape[2]//2+1,
+                                          featshape[3]//2-1:featshape[3]//2+1,
+                                          featshape[4]//2-1:featshape[4]//2+1])
         centerFeat = centerFeat[:,:,0,0,0]
         out = self.dropout(centerFeat)
         out = self.Relu(self.fc1(out))
