@@ -1,14 +1,14 @@
-# Paper link 
+DSB2017 PyTorch1.0 Python3.7 with multi GPUs
+
+# Illustration
+The project is based on lfz's work to upgrade and modify the version, and add some additional visualization functions.The original version is applicable to python 2.7 and pytorch 0.1 from https://github.com/lfz/DSB2017, and the Paper link is
 https://arxiv.org/abs/1711.08324
-Please cite this paper if you find this project helpful for your research.
+Please cite this paper if you find this project helpful for your research.膜拜大佬!!!
 
 # Dependencies
 
-Ubuntu 14.04, python 2.7, CUDA 8.0, cudnn 5.1, h5py (2.6.0), SimpleITK (0.10.0), numpy (1.11.3), nvidia-ml-py (7.352.0), matplotlib (2.0.0), scikit-image (0.12.3), scipy (0.18.1), pyparsing (2.1.4), pytorch (0.1.10+ac9245a) (anaconda is recommended)
-
-This is my configuration, I am not sure about the compatability of other versions
-
-
+python 3.7, CUDA 10.1,SimpleITK 1.2.2, numpy 1.17, matplotlib 3.1.1, scikit-image (0.21), scipy (0.3.1), pyparsing (2.4.2), pytorch (1.0) (anaconda is recommended)
+other packages could be the latest version.
 
 # Instructions for runing
 
