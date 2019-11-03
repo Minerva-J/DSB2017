@@ -38,9 +38,9 @@ def train_nodulenet(data_loader, net, loss, epoch, optimizer, args):
         if args.debug:
             if i >4:
                 break
-        data = Variable(data.cuda(async = True))
-        target = Variable(target.cuda(async = True))
-        coord = Variable(coord.cuda(async = True))
+        data = Variable(data.cuda(), requires_grad=True)
+        target = Variable(target.cuda())
+        coord = Variable(coord.cuda(), requires_grad=True)
 
         _,output = net(data, coord)
         loss_output = loss(output, target)
@@ -49,7 +49,7 @@ def train_nodulenet(data_loader, net, loss, epoch, optimizer, args):
         #torch.nn.utils.clip_grad_norm(net.parameters(), 1)
         optimizer.step()
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)
 
     end_time = time.time()
@@ -78,14 +78,14 @@ def validate_nodulenet(data_loader, net, loss):
 
     metrics = []
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True), volatile = True)
-        target = Variable(target.cuda(async = True), volatile = True)
-        coord = Variable(coord.cuda(async = True), volatile = True)
+        data = Variable(data.cuda())
+        target = Variable(target.cuda())
+        coord = Variable(coord.cuda())
 
         _,output = net(data, coord)
         loss_output = loss(output, target, train = False)
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)    
     end_time = time.time()
 
@@ -127,15 +127,16 @@ def test_nodulenet(data_loader, net, get_pbb, save_dir, config, n_per_run):
             if config['output_feature']:
                 isfeat = True
         print(data.size())
-        splitlist = range(0,len(data)+1,n_per_run)
+        # splitlist = range(0,len(data)+1,n_per_run)
+        splitlist = [i for i in range(0,len(data)+1,n_per_run)]
         if splitlist[-1]!=len(data):
             splitlist.append(len(data))
         outputlist = []
         featurelist = []
 
         for i in range(len(splitlist)-1):
-            input = Variable(data[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
-            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            input = Variable(data[splitlist[i]:splitlist[i+1]]).cuda()
+            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]]).cuda()
             _,output = net(input,inputcoord)
             outputlist.append(output.data.cpu().numpy())
         output = np.concatenate(outputlist,0)
