@@ -37,7 +37,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--save-freq', default='10', type=int, metavar='S',
+parser.add_argument('--save-freq', default='1', type=int, metavar='S',
                     help='save frequency')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
@@ -49,13 +49,13 @@ parser.add_argument('--split', default=8, type=int, metavar='SPLIT',
                     help='In the test phase, split the image to 8 parts')
 parser.add_argument('--gpu', default='all', type=str, metavar='N',
                     help='use gpu')
-parser.add_argument('--n_test', default=8, type=int, metavar='N',
+parser.add_argument('--n_test', default=1, type=int, metavar='N',
                     help='number of gpu for test')
 
 def main():
     global args
     args = parser.parse_args()
-    
+    print('start!')
     
     torch.manual_seed(0)
     torch.cuda.set_device(0)
@@ -66,6 +66,7 @@ def main():
     save_dir = args.save_dir
     
     if args.resume:
+        print('args.resume', args.resume)
         checkpoint = torch.load(args.resume)
         if start_epoch == 0:
             start_epoch = checkpoint['epoch'] + 1
@@ -101,12 +102,15 @@ def main():
     
     if args.test == 1:
         margin = 32
-        sidelen = 144
+        # margin = 16
+        # sidelen = 144
+        sidelen = 128
 
         split_comber = SplitComb(sidelen,config['max_stride'],config['stride'],margin,config['pad_value'])
         dataset = data.DataBowl3Detector(
             datadir,
             'full.npy',
+            # 'kaggleluna_full.npy',
             config,
             phase='test',
             split_comber=split_comber)
@@ -117,7 +121,12 @@ def main():
             num_workers = args.workers,
             collate_fn = data.collate,
             pin_memory=False)
-        
+        print('len(test_loader)',args.batch_size*len(test_loader))#
+        iter1, iter2, iter3, iter4 = next(iter(test_loader))
+        # print("sample: ", len(iter1))
+        # print("lable: ", iter2.size())
+        # print("coord: ", iter3.size())
+        # print("nzhw: ", iter4.size())
         test(test_loader, net, get_pbb, save_dir,config)
         return
 
@@ -146,7 +155,12 @@ def main():
         shuffle = False,
         num_workers = args.workers,
         pin_memory=True)
-
+    iter1, iter2, iter3 = next(iter(train_loader))
+    print('len(train_loader)',args.batch_size*len(train_loader))#1881
+    print('len(val_loader)',args.batch_size*len(val_loader))#216
+    print("sample: ", iter1.size())
+    print("lable: ", iter2.size())
+    print("coord: ", iter3.size())
     optimizer = torch.optim.SGD(
         net.parameters(),
         args.lr,
@@ -162,7 +176,7 @@ def main():
             lr = 0.01 * args.lr
         return lr
     
-
+    print('start training!')
     for epoch in range(start_epoch, args.epochs + 1):
         train(train_loader, net, loss, epoch, optimizer, get_lr, args.save_freq, save_dir)
         validate(val_loader, net, loss)
@@ -177,9 +191,9 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
 
     metrics = []
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True))
-        target = Variable(target.cuda(async = True))
-        coord = Variable(coord.cuda(async = True))
+        data = Variable(data.cuda(), requires_grad=True)
+        target = Variable(target.cuda())
+        coord = Variable(coord.cuda(), requires_grad=True)
 
         output = net(data, coord)
         loss_output = loss(output, target)
@@ -187,7 +201,7 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
         loss_output[0].backward()
         optimizer.step()
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)
 
     if epoch % args.save_freq == 0:            
@@ -228,14 +242,14 @@ def validate(data_loader, net, loss):
 
     metrics = []
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True), volatile = True)
-        target = Variable(target.cuda(async = True), volatile = True)
-        coord = Variable(coord.cuda(async = True), volatile = True)
+        data = Variable(data.cuda())
+        target = Variable(target.cuda())
+        coord = Variable(coord.cuda())
 
         output = net(data, coord)
         loss_output = loss(output, target, train = False)
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)    
     end_time = time.time()
 
@@ -258,7 +272,7 @@ def validate(data_loader, net, loss):
 
 def test(data_loader, net, get_pbb, save_dir, config):
     start_time = time.time()
-    save_dir = os.path.join(save_dir,'bbox')
+    save_dir = os.path.join(save_dir,'TrainBbox')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     print(save_dir)
@@ -278,16 +292,17 @@ def test(data_loader, net, get_pbb, save_dir, config):
             if config['output_feature']:
                 isfeat = True
         n_per_run = args.n_test
-        print(data.size())
+        # print('data.size',data.size())
         splitlist = range(0,len(data)+1,n_per_run)
+        # print('splitlist',splitlist)
         if splitlist[-1]!=len(data):
             splitlist.append(len(data))
         outputlist = []
         featurelist = []
 
         for i in range(len(splitlist)-1):
-            input = Variable(data[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
-            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            input = Variable(data[splitlist[i]:splitlist[i+1]]).cuda()
+            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]]).cuda()
             if isfeat:
                 output,feature = net(input,inputcoord)
                 featurelist.append(feature.data.cpu().numpy())
@@ -307,7 +322,8 @@ def test(data_loader, net, get_pbb, save_dir, config):
             np.save(os.path.join(save_dir, name+'_feature.npy'), feature_selected)
         #tp,fp,fn,_ = acc(pbb,lbb,0,0.1,0.1)
         #print([len(tp),len(fp),len(fn)])
-        print([i_name,name])
+        print(lbb.shape,pbb.shape,len(namelist))#(0,) (289, 5) 0////(1, 4) (640, 5) 0
+        print([i_name,name],save_dir)
         e = time.time()
         np.save(os.path.join(save_dir, name+'_pbb.npy'), pbb)
         np.save(os.path.join(save_dir, name+'_lbb.npy'), lbb)
@@ -323,7 +339,7 @@ def singletest(data,net,config,splitfun,combinefun,n_per_run,margin = 64,isfeat=
     z, h, w = data.size(2), data.size(3), data.size(4)
     print(data.size())
     data = splitfun(data,config['max_stride'],margin)
-    data = Variable(data.cuda(async = True), volatile = True,requires_grad=False)
+    data = Variable(data.cuda(),requires_grad=False)
     splitlist = range(0,args.split+1,n_per_run)
     outputlist = []
     featurelist = []
