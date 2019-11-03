@@ -191,7 +191,7 @@ class Loss(nn.Module):
                 self.regress_loss(ph, lh),
                 self.regress_loss(pw, lw),
                 self.regress_loss(pd, ld)]
-            regress_losses_data = [l.data[0] for l in regress_losses]
+            regress_losses_data = [l.item() for l in regress_losses]
             classify_loss = 0.5 * self.classify_loss(
             pos_prob, pos_labels[:, 0]) + 0.5 * self.classify_loss(
             neg_prob, neg_labels + 1)
@@ -205,7 +205,7 @@ class Loss(nn.Module):
             pos_correct = 0
             pos_total = 0
             regress_losses_data = [0,0,0,0]
-        classify_loss_data = classify_loss.data[0]
+        classify_loss_data = classify_loss.item()
 
         loss = classify_loss
         for regress_loss in regress_losses:
@@ -268,7 +268,7 @@ def nms(output, nms_th):
 
 def iou(box0, box1):
     
-    r0 = box0[3] / 2
+    r0 = box0[3] // 2
     s0 = box0[:3] - r0
     e0 = box0[:3] + r0
 
