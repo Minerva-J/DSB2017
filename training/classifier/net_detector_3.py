@@ -64,7 +64,6 @@ class Net(nn.Module):
                 else:
                     blocks.append(PostRes(self.featureNum_forw[i+1], self.featureNum_forw[i+1]))
             setattr(self, 'forw' + str(i + 1), nn.Sequential(*blocks))
-
             
         for i in range(len(num_blocks_back)):
             blocks = []
