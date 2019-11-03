@@ -15,24 +15,28 @@ class DataBowl3Detector(Dataset):
     def __init__(self, split, config, phase = 'train',split_comber=None):
         assert(phase == 'train' or phase == 'val' or phase == 'test')
         self.phase = phase
-        self.max_stride = config['max_stride']       
-        self.stride = config['stride']       
-        sizelim = config['sizelim']/config['reso']
-        sizelim2 = config['sizelim2']/config['reso']
-        sizelim3 = config['sizelim3']/config['reso']
+        self.max_stride = config['max_stride']#16    
+        self.stride = config['stride']#4       
+        sizelim = config['sizelim']//config['reso']#6//1
+        sizelim2 = config['sizelim2']//config['reso']#30//1
+        sizelim3 = config['sizelim3']/config['reso']#40//1
         self.blacklist = config['blacklist']
-        self.isScale = config['aug_scale']
-        self.r_rand = config['r_rand_crop']
-        self.augtype = config['augtype']
-        data_dir = config['datadir']
-        self.pad_value = config['pad_value']
+        self.isScale = config['aug_scale']#true
+        self.r_rand = config['r_rand_crop']#0.3
+        self.augtype = config['augtype']#{'flip':True,'swap':False,'scale':True,'rotate':False}
+        data_dir = config['datadir']#'../Data/preprocess/'
+        self.pad_value = config['pad_value']#170
         
         self.split_comber = split_comber
         idcs = split
         if phase!='test':
-            idcs = [f for f in idcs if f not in self.blacklist]
+            # idcs = [f for f in idcs if f not in self.blacklist]
+            idcs = [str(f,'utf-8') for f in idcs if (str(f,'utf-8') not in self.blacklist)]
+        else:
+            idcs = [str(f,'utf-8') for f in idcs]
 
         self.filenames = [os.path.join(data_dir, '%s_clean.npy' % idx) for idx in idcs]
+        # print('f',[f for f in self.filenames])
         self.kagglenames = [f for f in self.filenames if len(f.split('/')[-1].split('_')[0])>20]
         self.lunanames = [f for f in self.filenames if len(f.split('/')[-1].split('_')[0])<20]
         
@@ -50,11 +54,12 @@ class DataBowl3Detector(Dataset):
         for i, l in enumerate(labels):
             if len(l) > 0 :
                 for t in l:
-                    if t[3]>sizelim:
+                    # print('t',t)
+                    if t[3]>sizelim:#6
                         self.bboxes.append([np.concatenate([[i],t])])
-                    if t[3]>sizelim2:
+                    if t[3]>sizelim2:#30
                         self.bboxes+=[[np.concatenate([[i],t])]]*2
-                    if t[3]>sizelim3:
+                    if t[3]>sizelim3:#40
                         self.bboxes+=[[np.concatenate([[i],t])]]*4
         if len(self.bboxes)>0:
             self.bboxes = np.concatenate(self.bboxes,axis = 0)
@@ -115,15 +120,15 @@ class DataBowl3Detector(Dataset):
             coord = np.concatenate([xx[np.newaxis,...], yy[np.newaxis,...],zz[np.newaxis,:]],0).astype('float32')
             imgs, nzhw = self.split_comber.split(imgs)
             coord2, nzhw2 = self.split_comber.split(coord,
-                                                   side_len = self.split_comber.side_len/self.stride,
-                                                   max_stride = self.split_comber.max_stride/self.stride,
-                                                   margin = self.split_comber.margin/self.stride)
+                                                   side_len = self.split_comber.side_len//self.stride,
+                                                   max_stride = self.split_comber.max_stride//self.stride,
+                                                   margin = self.split_comber.margin//self.stride)
             assert np.all(nzhw==nzhw2)
             return torch.from_numpy(imgs), bboxes, torch.from_numpy(coord2), np.array(nzhw)
 
     def __len__(self):
         if self.phase == 'train':
-            return len(self.bboxes)/(1-self.r_rand)
+            return int(len(self.bboxes)/(1-self.r_rand))
         elif self.phase =='val':
             return len(self.bboxes)
         else:
@@ -176,7 +181,7 @@ class Crop(object):
         self.crop_size = config['crop_size']
         self.bound_size = config['bound_size']
         self.stride = config['stride']
-	self.pad_value = config['pad_value']
+        self.pad_value = config['pad_value']
 
     def __call__(self, imgs, target, bboxes,isScale=False,isRand=False):
         if isScale:
@@ -199,20 +204,20 @@ class Crop(object):
                 s = np.floor(target[i] - r)+ 1 - bound_size
                 e = np.ceil (target[i] + r)+ 1 + bound_size - crop_size[i] 
             else:
-                s = np.max([imgs.shape[i+1]-crop_size[i]/2,imgs.shape[i+1]/2+bound_size])
-                e = np.min([crop_size[i]/2,              imgs.shape[i+1]/2-bound_size])
+                s = np.max([imgs.shape[i+1]-crop_size[i]//2,imgs.shape[i+1]//2+bound_size])
+                e = np.min([crop_size[i]//2,              imgs.shape[i+1]//2-bound_size])
                 target = np.array([np.nan,np.nan,np.nan,np.nan])
             if s>e:
                 start.append(np.random.randint(e,s))#!
             else:
-                start.append(int(target[i])-crop_size[i]/2+np.random.randint(-bound_size/2,bound_size/2))
+                start.append(int(target[i])-crop_size[i]//2+np.random.randint(-bound_size//2,bound_size//2))
                 
                 
         normstart = np.array(start).astype('float32')/np.array(imgs.shape[1:])-0.5
         normsize = np.array(crop_size).astype('float32')/np.array(imgs.shape[1:])
-        xx,yy,zz = np.meshgrid(np.linspace(normstart[0],normstart[0]+normsize[0],self.crop_size[0]/self.stride),
-                           np.linspace(normstart[1],normstart[1]+normsize[1],self.crop_size[1]/self.stride),
-                           np.linspace(normstart[2],normstart[2]+normsize[2],self.crop_size[2]/self.stride),indexing ='ij')
+        xx,yy,zz = np.meshgrid(np.linspace(normstart[0],normstart[0]+normsize[0],self.crop_size[0]//self.stride),
+                           np.linspace(normstart[1],normstart[1]+normsize[1],self.crop_size[1]//self.stride),
+                           np.linspace(normstart[2],normstart[2]+normsize[2],self.crop_size[2]//self.stride),indexing ='ij')
         coord = np.concatenate([xx[np.newaxis,...], yy[np.newaxis,...],zz[np.newaxis,:]],0).astype('float32')
 
         pad = []
@@ -273,7 +278,7 @@ class LabelMapping(object):
         output_size = []
         for i in range(3):
             assert(input_size[i] % stride == 0)
-            output_size.append(input_size[i] / stride)
+            output_size.append(input_size[i] // stride)
         
         label = np.zeros(output_size + [len(anchors), 5], np.float32)
         offset = ((stride.astype('float')) - 1) / 2
