@@ -41,6 +41,7 @@ After runing prepare.py, The folder of config['preprocess_result_path_with_mask'
 
 cd ./detector and python main.py --model res18 -b 12 --epochs 1000 --save-dir res18/CkptFile
 You can modify -b(batch_size) depend on your GPU memory and number. 
+
 cp results/res18/CkptFile/1000.ckpt ../../model/detector.ckpt
 
 # 6.Run classifier：
@@ -48,7 +49,9 @@ cp results/res18/CkptFile/1000.ckpt ../../model/detector.ckpt
 cd classifier and python adapt_ckpt.py --model1  net_detector_3 --model2  net_classifier_3  --resume ../detector/results/res18/CkptFile/1000.ckpt 
 
 python main.py --model1  net_detector_3 --model2  net_classifier_3 -b 4 -b2 4 --save-dir net3 --resume ./results/start.ckpt --start-epoch 30 --epochs 130
+
 python main.py --model1  net_detector_3 --model2  net_classifier_4 -b 4 -b2 4 --save-dir net4 --resume ./results/net3/130.ckpt --freeze_batchnorm 1 --start-epoch 121
+
 cp results/net4/160.ckpt ../../model/classifier.ckpt
 
 # Testing：
