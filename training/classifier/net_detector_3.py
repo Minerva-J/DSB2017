@@ -102,6 +102,7 @@ class Net(nn.Module):
 
     def forward(self, x, coord):
         #x = (x-128.)/128.
+        # print('x',x.shape)#([5, 1, 96, 96, 96])
         out = self.preBlock(x)#16
         out_pool,indices0 = self.maxpool1(out)
         out1 = self.forw1(out_pool)#32
@@ -113,19 +114,22 @@ class Net(nn.Module):
         out3_pool,indices3 = self.maxpool4(out3)
         out4 = self.forw4(out3_pool)#96
         #out4 = self.drop(out4)
-        
+        # print('out4',out4.shape)#([5, 64, 6, 6, 6])
         rev3 = self.path1(out4)
         comb3 = self.back3(torch.cat((rev3, out3), 1))#96+96
         #comb3 = self.drop(comb3)
         rev2 = self.path2(comb3)
-        
+        # print('out4',rev2.shape,out2.shape,coord.shape)#([5, 64, 24, 24, 24]) torch.Size([5, 64, 24, 24, 24]) torch.Size([5, 3, 24, 24, 24])
         feat = self.back2(torch.cat((rev2, out2,coord), 1))#64+64
         comb2 = self.drop(feat)
         out = self.output(comb2)
+        # print('out',out.shape)#([5, 15, 24, 24, 24])
         size = out.size()
         out = out.view(out.size(0), out.size(1), -1)
+        # print('out',out.shape)#([5, 15, 13824])
         #out = out.transpose(1, 4).transpose(1, 2).transpose(2, 3).contiguous()
         out = out.transpose(1, 2).contiguous().view(size[0], size[2], size[3], size[4], len(config['anchors']), 5)
+        # print('feat,out',feat.shape,out.shape)#([5, 128, 24, 24, 24]) torch.Size([5, 24, 24, 24, 3, 5])
         #out = out.view(-1, 5)
         return feat,out
     
