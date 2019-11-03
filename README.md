@@ -12,19 +12,23 @@ other packages could be the latest version.
 
 # Instructions for runing
 
-Training:
-1.Install all dependencies
+# Training:
 
-2.Download dataset:
+# 1.Install all dependencies
+
+# 2.Download dataset:
+
 Download luna data from https://luna16.grand-challenge.org/download/, and DSB data from https://www.kaggle.com/c/data-science-bowl-2017/data,
 
-3.Prepare data:
+# 3.Prepare data:
+
 Prepare stage1 data, LUNA data, and LUNA segment results  unzip them to different folders('stage1_data_path', 'luna_raw', 'luna_segment') from ./training/config_training.py
 Go to ./training and open config_training.py
 Filling in stage1_data_path, luna_raw, luna_segment with the path mentioned above
 Filling in luna_data, preprocess_result_path, with tmp folders
 
-4.Proprocess data
+# 4.Proprocess data
+
 cd ./training/ and python prepare.py
 
 4.1 The function of full_prep in 381 line proproces DSB data stage1, and generate mask.npy clean.npy labe.npy to folder of config['preprocess_result_path_with_mask']. The files number is 1595*3=4785.
@@ -33,19 +37,22 @@ cd ./training/ and python prepare.py
 
 4.3 The function of preprocess_luna in 383 line proproces luna data, and generate mask.npy clean.npy labe.npy to folder of config['preprocess_result_path_with_mask']. The files number is .
 After runing prepare.py, The folder of config['preprocess_result_path_with_mask'] contains 7449(1595*3+888*3) files.
-5.Run detector
+# 5.Run detector
+
 cd ./detector and python main.py --model res18 -b 12 --epochs 1000 --save-dir res18/CkptFile
 You can modify -b(batch_size) depend on your GPU memory and number. 
 cp results/res18/CkptFile/1000.ckpt ../../model/detector.ckpt
 
-6.Run classifier
+# 6.Run classifier
+
 cd classifier and python adapt_ckpt.py --model1  net_detector_3 --model2  net_classifier_3  --resume ../detector/results/res18/CkptFile/1000.ckpt 
 
 python main.py --model1  net_detector_3 --model2  net_classifier_3 -b 4 -b2 4 --save-dir net3 --resume ./results/start.ckpt --start-epoch 30 --epochs 130
 python main.py --model1  net_detector_3 --model2  net_classifier_4 -b 4 -b2 4 --save-dir net4 --resume ./results/net3/130.ckpt --freeze_batchnorm 1 --start-epoch 121
 cp results/net4/160.ckpt ../../model/classifier.ckpt
 
-Testing
+# Testing
+
 1.	unzip the stage 2 data 
 2.	go to root folder
 3.	open config_submit.py, filling in datapath with the stage 2 data path
