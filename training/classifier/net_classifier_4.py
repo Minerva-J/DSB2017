@@ -62,22 +62,26 @@ class CaseNet(nn.Module):
 #         xlist: n x k x 1x 96 x 96 x 96
 #         coordlist: n x k x 3 x 24 x 24 x 24
         xsize = xlist.size()
+        # print('xsize0, coordlist0',xsize, coordlist.size())#([1, 5, 1, 96, 96, 96]) torch.Size([1, 5, 3, 24, 24, 24])
         corrdsize = coordlist.size()
         xlist = xlist.view(-1,xsize[2],xsize[3],xsize[4],xsize[5])
         coordlist = coordlist.view(-1,corrdsize[2],corrdsize[3],corrdsize[4],corrdsize[5])
-        
+        # print('xsize1, coordlist1',xlist.shape, coordlist.size())#([5, 1, 96, 96, 96]) torch.Size([5, 3, 24, 24, 24])
         noduleFeat,nodulePred = self.NoduleNet(xlist,coordlist)
         nodulePred = nodulePred.contiguous().view(corrdsize[0],corrdsize[1],-1)
-        
+        # print('noduleFeat, nodulePred',nodulePred.shape, noduleFeat.shape)#([1, 5, 207360]) torch.Size([5, 128, 24, 24, 24])
         featshape = noduleFeat.size()#nk x 128 x 24 x 24 x24
-        centerFeat = self.pool(noduleFeat[:,:,featshape[2]/2-1:featshape[2]/2+1,
-                                          featshape[3]/2-1:featshape[3]/2+1,
-                                          featshape[4]/2-1:featshape[4]/2+1])
+        # print('nodulePred, featshape',nodulePred.shape, featshape)#([1, 5, 207360]) torch.Size([5, 128, 24, 24, 24])
+        centerFeat = self.pool(noduleFeat[:,:,featshape[2]//2-1:featshape[2]//2+1,featshape[3]//2-1:featshape[3]//2+1,featshape[4]//2-1:featshape[4]//2+1])
+        # print('centerFeat',centerFeat.shape)#([5, 128, 1, 1, 1])
         centerFeat = centerFeat[:,:,0,0,0]
         out = self.dropout(centerFeat)
         out = self.Relu(self.fc1(out))
         out = torch.sigmoid(self.fc2(out))
+        # print('out',out.shape)#([5, 1])
         out = out.view(xsize[0],xsize[1])
         base_prob = torch.sigmoid(self.baseline)
+        # print('base_prob',base_prob)#[1.9607e-09]
         casePred = 1-torch.prod(1-out,dim=1)*(1-base_prob.expand(out.size()[0]))
+        # print('casePred',casePred)#[0.0295]
         return nodulePred,casePred,out
