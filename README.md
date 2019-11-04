@@ -31,9 +31,9 @@ Filling in luna_data, preprocess_result_path, with tmp folders
 
 cd ./training/ and python prepare.py
 
-4.1 The function of full_prep in 381 line proproces DSB data stage1, and generate mask.npy clean.npy labe.npy to folder of config['preprocess_result_path_with_mask']. The files number is 1595*3=4785.
+4.1 The function of full_prep in 381 line proproces DSB data stage1, and generate mask.npy clean.npy labe.npy to folder of config['preprocess_result_path_with_mask']. The files number is 1595 * 3=4785.
 
-4.2 The function of prepare_luna in 382 line copy and rename luna data.Copy luna data from config['luna_raw'] to config['luna_data'], and rename all files to like 001.mhd and 001.raw. The folder of config['luna_data'] contain 888*2 = 1776 files. Copy luna seg data from config['luna_segment'] to config['luna_segment'], and rename all files to like 001.mhd and 001.zraw. The folder of config['luna_segment'] contain 888*2 = 1776 files.
+4.2 The function of prepare_luna in 382 line copy and rename luna data.Copy luna data from config['luna_raw'] to config['luna_data'], and rename all files to like 001.mhd and 001.raw. The folder of config['luna_data'] contain 888*2 = 1776 files. Copy luna seg data from config['luna_segment'] to config['luna_segment'], and rename all files to like 001.mhd and 001.zraw. The folder of config['luna_segment'] contain 888 * 2 = 1776 files.
 
 4.3 The function of preprocess_luna in 383 line proproces luna data, and generate mask.npy clean.npy labe.npy to folder of config['preprocess_result_path_with_mask']. The files number is 2664.
 After runing prepare.py, The folder of config['preprocess_result_path_with_mask'] contains 7449(1595 * 3+888 * 3) files.
